@@ -13,54 +13,46 @@ import matplotlib.pyplot as plt
 
 class SA(object):
     def __init__(self, num_city, data):
-        self.T0 = 4000
-        self.Tend = 1e-3
+        self.T0 = 1000
+        self.Tend = 1e-10
         self.rate = 0.9995
         self.num_city = num_city
         self.scores = []
         self.location = data
-        # fruits中存每一个个体是下标的list
+        # fires中存每一个个体是下标的list
         self.fires = []
-        self.dis_mat = self.compute_dis_mat(num_city, data)
-        self.fire = self.greedy_init(self.dis_mat,100,num_city)
+        self.dis_mat = self.compute_dis_mat(num_city, data) #城市距离矩阵
+        self.fire = self.greedy_init(self.dis_mat,num_city) #贪心算法返回的初始路径标号
         # 显示初始化后的路径
-        init_pathlen = 1. / self.compute_pathlen(self.fire, self.dis_mat)
-        init_best = self.location[self.fire]
+        init_pathlen = 1. / self.compute_pathlen(self.fire, self.dis_mat)   #贪婪算法求得的路径长度
+        init_best = self.location[self.fire]        #贪婪算法求得的初始路径位置
         # 存储存储每个温度下的最终路径，画出收敛图
         self.iter_x = [0]
         self.iter_y = [1. / init_pathlen]
     #贪婪策略求初始路径
-    def greedy_init(self, dis_mat, num_total, num_city):
-        start_index = 0
-        result = []
-        for i in range(num_total):
-            rest = [x for x in range(0, num_city)]
-            # 所有起始点都已经生成了
-            if start_index >= num_city:
-                start_index = np.random.randint(0, num_city)
-                result.append(result[start_index].copy())
-                continue
-            current = start_index
-            rest.remove(current)
-            # 找到一条最近邻路径
-            result_one = [current]
-            while len(rest) != 0:
-                tmp_min = math.inf
-                tmp_choose = -1
-                for x in rest:
-                    if dis_mat[current][x] < tmp_min:
-                        tmp_min = dis_mat[current][x]
-                        tmp_choose = x
-
-                current = tmp_choose
-                result_one.append(tmp_choose)
-                rest.remove(tmp_choose)
-            result.append(result_one)
-            start_index += 1
-        pathlens = self.compute_paths(result) #贪婪算法得到100条路径
-        sortindex = np.argsort(pathlens)    
-        index = sortindex[0]
-        return result[index]
+    def greedy_init(self,dis_mat, num_city):
+        #生成一个列表0,1,...,num_city-1
+        rest = [x for x in range(0, num_city-1)]    #剔除最后一个点，即原点
+        current = 0
+        #去掉列表rest中值为current
+        rest.remove(current)
+        # 找到一条最近邻路径
+        result_one = [] #存储路径点标号
+        result_one.append(current)
+        while len(rest) != 0:
+            #暂存最小值
+            tmp_min = math.inf
+            tmp_choose = -1
+            for x in rest:
+                if dis_mat[current][x] < tmp_min:
+                    tmp_min = dis_mat[current][x]
+                    tmp_choose = x
+            #找到距离当前点最近的点，并更新之成为最近的点
+            current = tmp_choose
+            result_one.append(tmp_choose)   #在路径下标数组不断更新最新找到的最近点
+            rest.remove(tmp_choose)         #将已经找到的点剔除
+        result_one.append(101)  #默认最后一个点为原点，添加到路径末尾
+        return result_one
 
     # 初始化一条随机路径
     # def random_init(self, num_city):
@@ -86,10 +78,10 @@ class SA(object):
 
     # 计算路径长度
     def compute_pathlen(self, path, dis_mat):
-        a = path[0]
+        a = path[-2]
         b = path[-1]
-        result = dis_mat[a][b]
-        for i in range(len(path) - 1):
+        result = dis_mat[a][b]  #先计算回到原点的距离
+        for i in range(len(path) - 2):
             a = path[i]
             b = path[i + 1]
             result += dis_mat[a][b]
@@ -98,6 +90,7 @@ class SA(object):
     # 计算一个温度下产生的一个群体的长度
     def compute_paths(self, paths):
         result = []
+        #计算100条按照贪婪算法得到的路径长度，返回结果
         for one in paths:
             length = self.compute_pathlen(one, self.dis_mat)
             result.append(length)
@@ -106,7 +99,12 @@ class SA(object):
     # 产生一个新的解：随机交换两个元素的位置
     def get_new_fire(self, fire):
         fire = fire.copy()
-        t = [x for x in range(len(fire))]
+        #生成1到100间的2个随机数
+        # temp = fire[a]
+        # fire[a] = fire[b]
+        # fire[b] = temp
+       #a, b = np.random.choice(t, 2)
+        t = [x for x in range(1,len(fire)-1)]
         a, b = np.random.choice(t, 2)
         fire[a:b] = fire[a:b][::-1]
         return fire
@@ -128,8 +126,8 @@ class SA(object):
     def sa(self):
         count = 0
         # 记录最优解
-        best_path = self.fire
-        best_length = self.compute_pathlen(self.fire, self.dis_mat)
+        best_path = self.fire   #
+        best_length = self.compute_pathlen(self.fire, self.dis_mat)     #初始最优路径长度
 
         while self.T0 > self.Tend:
             count += 1
@@ -177,7 +175,47 @@ class SA(object):
 #     data = tmp
 #     return data
 
+#计算距离矩阵测试
+# def compute_dis_mat(num_city, location):
+#     dis_mat = np.zeros((num_city, num_city)) 
+#     for i in range(num_city):
+#         for j in range(num_city):
+#             if i == j:
+#                 dis_mat[i][j] = np.inf
+#                 continue
+#             a = location[i]
+#             b = location[j]
+#             #tmp = np.sqrt(sum([(x[0] - x[1]) ** 2 for x in zip(a, b)])) #Zip函数 ,计算欧拉距离
+#             #计算经纬度距离
+#             tmp = 6370*math.acos(math.cos(a[0]-b[0])*math.cos(a[1])*math.cos(b[1])+math.sin(a[1])*math.sin(b[1]))
+#             dis_mat[i][j] = tmp
+#     return dis_mat
 
+#贪婪算法求初始路径测试
+# def greedy_init(dis_mat, num_total, num_city):
+#     start_index = 0
+#     #生成一个列表0,1,...,num_city-1
+#     rest = [x for x in range(0, num_city-1)]
+#     current = start_index
+#     #去掉列表rest中值为current
+#     rest.remove(current)
+#     # 找到一条最近邻路径
+#     result_one = [] #存储路径点标号
+#     result_one.append(current)
+#     while len(rest) != 0:
+#         #暂存最小值
+#         tmp_min = math.inf
+#         tmp_choose = -1
+#         for x in rest:
+#             if dis_mat[current][x] < tmp_min:
+#                 tmp_min = dis_mat[current][x]
+#                 tmp_choose = x
+#         #找到距离当前点最近的点，并更新之成为最近的点
+#         current = tmp_choose
+#         result_one.append(tmp_choose)   #在路径下标数组不断更新最新找到的最近点
+#         rest.remove(tmp_choose)         #将已经找到的点剔除
+#     result_one.append(102)
+#     return result_one
 
 f=open(r"TSP_Data.txt")
 line = f.readline()
@@ -190,21 +228,25 @@ f.close()
 temp_data = np.array(data_list)
 temp_data = np.vstack([temp_data[:,0:2], temp_data[:,2:4],temp_data[:,4:6], temp_data[:,6:8]])    
 #不添加索引
-data = np.empty((101,2))
-data[0,:]= [70,40]
+data = np.empty((102,2))
+data[0,:],data[101,:]= [70,40],[70,40]
 data[1:101,0:2] =temp_data
+
+
 #在第一列添加索引
-index_num = np.array(list(range(2, 102)))
-data_index = np.empty((101,3))
+index_num = np.array(list(range(1, 101)))
+data_index = np.empty((102,3))
 data_index[1:101,0] = index_num
 data_index[1:101,1:3] =temp_data
-data_index[0,:]= [1,70,40]
+data_index[0,:]= [0,70,40]
+data_index[101,:]= [101,70,40]
+
 
 #经纬度数据，将角度转换成弧度
 data = data*math.pi/180
 
 #show_data = np.vstack([data, data[0]])
-Best_path = np.empty((101,3))   #第一列为路径规划后目标点索引，第二、三列为经纬度坐标
+Best_path = np.empty((102,3))   #第一列为路径规划后目标点索引，第二、三列为经纬度坐标
 Best,Fly_time = math.inf,None
 #代入退火算法模型求解
 model = SA(num_city=data.shape[0], data=data.copy())
@@ -226,7 +268,7 @@ for i in range(Best_path.shape[0]):
         if((round(Best_path[i,1],4)==round(data_index[j,1],4)) and (round(Best_path[i,2],4)==round(data_index[j,2],4))):
            Best_path[i,0] = data_index[j,0]
            break 
-                
+Best_path[101,0] = 101              
 # 加上一行因为会回到起点
 #Best_path = np.vstack([Best_path, Best_path[0]])
 
@@ -239,6 +281,8 @@ plt.annotate(' Start 1 ', (70, 40), xytext=(56, 39),
 #标出最后一个目标点
 plt.annotate(f" Last target {int(Best_path[0,0])}" , (Best_path[0,1],Best_path[0,2]), xytext=(Best_path[0,1]+2, Best_path[0,2]-3),
               arrowprops=dict(arrowstyle='->'))
+
+plt.savefig('Imag/路线_1000_e10_9995.jpg', dpi=600)
 plt.show()
 
 iterations = model.iter_x
