@@ -8,11 +8,16 @@ Created on Sat Oct 28 21:58:43 2023
 #修改了源代码，将其变为给定初始点（终点）求最优的路径，目前可以得出一条规划好的路线，但可能不是最优的。
 #尤其是在产生新解的方法上有待进一步考虑与改进
 ##
+## 20231101
+#修改了源代码，修改了新路径的更新部分代码。修改了绘制的优化路径图像以及温度与迭代路径长度图像。将数据输出到excel中的2个sheet
+##
+
 
 import random
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 class SA(object):
@@ -31,7 +36,7 @@ class SA(object):
         init_pathlen = 1. / self.compute_pathlen(self.fire, self.dis_mat)   #贪婪算法求得的路径长度
         init_best = self.location[self.fire]        #贪婪算法求得的初始路径位置
         # 存储存储每个温度下的最终路径，画出收敛图
-        self.iter_x = [0]
+        self.iter_x = [self.T0]
         self.iter_y = [1. / init_pathlen]
     #贪婪策略求初始路径
     def greedy_init(self,dis_mat, num_city):
@@ -100,17 +105,19 @@ class SA(object):
             result.append(length)
         return result
 
-    # 产生一个新的解：随机交换两个元素的位置
+    # 产生一个新的解：随机交换两个元素的位置，即2交换法
     def get_new_fire(self, fire):
         fire = fire.copy()
         #生成1到100间的2个随机数
-        # temp = fire[a]
-        # fire[a] = fire[b]
-        # fire[b] = temp
-       #a, b = np.random.choice(t, 2)
+        #生成1：100，步长为1的数组
         t = [x for x in range(1,len(fire)-1)]
-        a, b = np.random.choice(t, 2)
-        fire[a:b] = fire[a:b][::-1]
+        #取生成数组中的任意两个数作为交换元素
+        c = np.random.choice(t, 2)
+        #将随机数按升序方法排列
+        c = sorted(c)
+        #生成新的路径：根据找到的随机数，c[1]>c[0].
+        #然后将c[0]：c[1]+1(之所以要+1因为python最后一个数会减1)间的路径标号倒置，利用[::-1],生成新路径
+        fire[c[0]:c[1]+1] = fire[c[0]:c[1]+1][::-1] #
         return fire
 
     # 退火策略，根据温度变化有一定概率接受差的解
@@ -143,11 +150,12 @@ class SA(object):
             if file_len < best_length:
                 best_length = file_len
                 best_path = self.fire
+            
+            # 记录路径收敛曲线
+            self.iter_x.append(self.T0)
+            self.iter_y.append(best_length)
             # 降低温度
             self.T0 *= self.rate
-            # 记录路径收敛曲线
-            self.iter_x.append(count)
-            self.iter_y.append(best_length)
             print(count, best_length)
         return best_length, best_path
 
@@ -221,6 +229,7 @@ class SA(object):
 #     result_one.append(102)
 #     return result_one
 
+#读取txt文件中数据
 f=open(r"TSP_Data.txt")
 line = f.readline()
 data_list = []
@@ -229,6 +238,8 @@ while line :
     data_list.append(num)
     line = f.readline()
 f.close()
+
+
 temp_data = np.array(data_list)
 temp_data = np.vstack([temp_data[:,0:2], temp_data[:,2:4],temp_data[:,4:6], temp_data[:,6:8]])    
 #不添加索引
@@ -273,8 +284,19 @@ for i in range(Best_path.shape[0]):
            Best_path[i,0] = data_index[j,0]
            break 
 Best_path[101,0] = 101              
-# 加上一行因为会回到起点
-#Best_path = np.vstack([Best_path, Best_path[0]])
+
+
+#输出求解结果至excel
+writer = pd.ExcelWriter(r'path_out1.xlsx')
+path_out=pd.DataFrame(Best_path)
+path_out.columns=["标号","经度","纬度"]
+path_out.to_excel(writer, sheet_name="路径1")
+Fly_time_out = ['飞行时间/h',Fly_time]
+Fly_time_out = pd.DataFrame(Fly_time_out)
+Fly_time_out .to_excel(writer, sheet_name="飞行时间1")
+writer._save()
+
+
 
 plt.scatter(Best_path[:, 1], Best_path[:,2])
 plt.plot(Best_path[:, 1], Best_path[:, 2])
@@ -283,14 +305,19 @@ plt.title('Optimized route results')
 plt.annotate(' Start 1 ', (70, 40), xytext=(56, 39),
               arrowprops=dict(arrowstyle='->')) 
 #标出最后一个目标点
-plt.annotate(f" Last target {int(Best_path[0,0])}" , (Best_path[0,1],Best_path[0,2]), xytext=(Best_path[0,1]+2, Best_path[0,2]-3),
+plt.annotate(f" Last {int(Best_path[100,0])}" , (Best_path[100,1],Best_path[100,2]), xytext=(Best_path[100,1]+2, Best_path[100,2]-3),
               arrowprops=dict(arrowstyle='->'))
-
+plt.xlabel('$longitude$'); plt.ylabel('$Latitude$')
 plt.savefig('Imag/路线_1000_e10_9995.jpg', dpi=600)
 plt.show()
 
-iterations = model.iter_x
+#将迭代过程的温度与对应的路径长度进行记录
+iteration_t = model.iter_x
 best_record = model.iter_y
-plt.plot(iterations, best_record)
+plt.plot(iteration_t, best_record)
+#反转横坐标
+plt.gca().invert_xaxis()
 plt.title('Convergence curves')
+plt.xlabel('$Temperature$'); plt.ylabel('$Path_Length$')
+plt.savefig('Imag/收敛线_1000_e10_9995.jpg', dpi=600)
 plt.show()
