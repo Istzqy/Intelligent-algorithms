@@ -96,14 +96,14 @@ class SA(object):
             result += dis_mat[a][b]
         return result
 
-    # 计算一个温度下产生的一个群体的长度
-    def compute_paths(self, paths):
-        result = []
-        #计算100条按照贪婪算法得到的路径长度，返回结果
-        for one in paths:
-            length = self.compute_pathlen(one, self.dis_mat)
-            result.append(length)
-        return result
+    # # 计算一个温度下产生的一个群体的长度
+    # def compute_paths(self, paths):
+    #     result = []
+    #     #计算按照贪婪算法得到的路径长度，返回结果
+    #     for one in paths:
+    #         length = self.compute_pathlen(one, self.dis_mat)
+    #         result.append(length)
+    #     return result
 
     # 产生一个新的解：随机交换两个元素的位置，即2交换法
     def get_new_fire(self, fire):
@@ -239,7 +239,7 @@ while line :
     line = f.readline()
 f.close()
 
-
+#用于将数据进行重新拼接变为2列
 temp_data = np.array(data_list)
 temp_data = np.vstack([temp_data[:,0:2], temp_data[:,2:4],temp_data[:,4:6], temp_data[:,6:8]])    
 #不添加索引
@@ -269,13 +269,15 @@ model = SA(num_city=data.shape[0], data=data.copy())
 path, path_len = model.run()
 Fly_time = path_len/1000     #路径路程/飞行时速1000km/h
 print("path length is ",path_len,"fly time is ",Fly_time)
-if path_len < Best:
-    Best = path_len
-    Best_path[:,1:3] = path
+
+
 
 
 #绘制航行路线
 #还原出经纬度数据，将弧度转换成角度
+if path_len < Best:
+    Best = path_len
+    Best_path[:,1:3] = path
 Best_path = Best_path*180/(math.pi)
 #找到对应的索引下标
 for i in range(Best_path.shape[0]):
