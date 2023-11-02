@@ -1,0 +1,11 @@
+TSP_collection文件夹：是从github上clone的代码，求解TSP（70city）问题的。里面有对应不同的算法python代码，data文件夹存储的是数据集，img是生成的图像
+
+
+除了TSO_collection文件夹：
+智能算法实验作业.png是求解的问题
+TSP_Data.txt是数据集
+.m: 文件是求解该问题的相关算法的matlab代码
+模拟退火算法测试.py	: 是网上找的关于演示模拟退火算法的一个代码，求极值，与本题无关
+模拟退火算法求解TSP.py :基于TSP_collection文件夹中模拟退火求解TSP问题算法思路修改成本题的求解代码
+Imag文件夹：存储模拟退火算法求解TSP.py生成的优化路径与收敛曲线
+path_out1.xlsx : 求解生成的最优路径以及最短飞行时间
